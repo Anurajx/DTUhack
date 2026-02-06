@@ -1,7 +1,7 @@
 import React from 'react';
 import './Recommendation.css';
 
-const Recommendation = ({ recommendation, prediction }) => {
+const Recommendation = ({ recommendation, prediction, onSendToCustomers, sending, lastSentStatus }) => {
   const { predicted_load, risk } = prediction || { predicted_load: 0, risk: 'LOW' };
   
   // Calculate impact metrics
@@ -38,6 +38,16 @@ const Recommendation = ({ recommendation, prediction }) => {
       <div className="recommendation-text">
         {recommendation || 'Usage is optimal.'}
       </div>
+      <button 
+        className="send-button" 
+        onClick={onSendToCustomers}
+        disabled={sending}
+      >
+        {sending ? 'Sending alerts…' : 'Send to customers'}
+      </button>
+      {lastSentStatus && (
+        <div className="send-status">{lastSentStatus}</div>
+      )}
       {risk !== 'LOW' && (
         <div className="impact-metrics">
           <div className="impact-item">

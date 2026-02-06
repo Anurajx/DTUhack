@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 import pandas as pd
 import os
 from datetime import datetime
@@ -35,6 +35,19 @@ class PredictionParams(BaseModel):
     heating_usage: Optional[float] = None
     time_of_day: Optional[int] = None
     community_size: Optional[int] = None
+
+
+class ForecastResponseItem(BaseModel):
+    hour_offset: int
+    time_of_day: int
+    predicted_load: float
+    risk: str
+
+
+class NotifyRequest(BaseModel):
+    params: PredictionParams
+    predicted_load: float
+    risk: str
 
 @app.get("/data")
 async def get_data():
@@ -198,6 +211,49 @@ async def get_recommendation_get():
         recommendation = "Usage is optimal."
     
     return {"recommendation": recommendation}
+
+
+@app.post("/forecast", response_model=List[ForecastResponseItem])
+async def forecast(params: PredictionParams):
+    """Return forecast for now and next 3 hours based on current parameters."""
+    base_hour = params.time_of_day if params.time_of_day is not None else datetime.now().hour
+    forecasts: List[ForecastResponseItem] = []
+
+    for offset in range(0, 4):
+        hour = (base_hour + offset) % 24
+        local_params = PredictionParams(
+            **{
+                **{k: v for k, v in params.dict().items() if v is not None},
+                "time_of_day": hour,
+            }
+        )
+        result = await predict(local_params)
+        forecasts.append(
+            ForecastResponseItem(
+                hour_offset=offset,
+                time_of_day=hour,
+                predicted_load=result["predicted_load"],
+                risk=result["risk"],
+            )
+        )
+
+    return forecasts
+
+
+@app.post("/notify")
+async def notify_customers(payload: NotifyRequest):
+    """Simulate sending alerts/emails to customers based on current risk."""
+    notified_count = max(1, int((payload.params.community_size or 100) * 0.8))
+    timestamp = datetime.utcnow().isoformat() + "Z"
+
+    return {
+        "status": "sent",
+        "risk": payload.risk,
+        "predicted_load": payload.predicted_load,
+        "notified_customers": notified_count,
+        "timestamp": timestamp,
+    }
+
 
 @app.get("/")
 async def root():

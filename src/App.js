@@ -12,8 +12,11 @@ function App() {
   const [loadData, setLoadData] = useState([]);
   const [prediction, setPrediction] = useState({ predicted_load: 0, risk: 'LOW', components: {} });
   const [recommendation, setRecommendation] = useState({ recommendation: '' });
+  const [forecast, setForecast] = useState([]);
   const [loading, setLoading] = useState(true);
   const [aiActive, setAIActive] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [lastSentStatus, setLastSentStatus] = useState('');
   
   const [params, setParams] = useState({
     current_load: 100,
@@ -55,6 +58,15 @@ function App() {
     }
   }, [params]);
 
+  const fetchForecast = useCallback(async () => {
+    try {
+      const res = await axios.post(`${API_URL}/forecast`, params);
+      setForecast(res.data || []);
+    } catch (error) {
+      console.error('Error fetching forecast:', error);
+    }
+  }, [params]);
+
   const handleParamChange = (key, value) => {
     setParams(prev => ({
       ...prev,
@@ -62,11 +74,12 @@ function App() {
     }));
   };
 
-  // Fetch prediction and recommendation when params change
+  // Fetch prediction, recommendation and forecast when params change
   useEffect(() => {
     fetchPrediction();
     fetchRecommendation();
-  }, [fetchPrediction, fetchRecommendation]);
+    fetchForecast();
+  }, [fetchPrediction, fetchRecommendation, fetchForecast]);
 
   // Fetch historical data on mount and periodically
   useEffect(() => {
@@ -74,12 +87,31 @@ function App() {
       await fetchHistoricalData();
       await fetchPrediction();
       await fetchRecommendation();
+       await fetchForecast();
       setLoading(false);
     };
     initData();
     const interval = setInterval(fetchHistoricalData, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleSendToCustomers = async () => {
+    try {
+      setSending(true);
+      setLastSentStatus('');
+      await axios.post(`${API_URL}/notify`, {
+        params,
+        predicted_load: prediction.predicted_load,
+        risk: prediction.risk,
+      });
+      setLastSentStatus('Alerts sent to customers');
+    } catch (error) {
+      console.error('Error sending notifications:', error);
+      setLastSentStatus('Failed to send alerts');
+    } finally {
+      setSending(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -115,9 +147,15 @@ function App() {
 
           <div className="context-section">
             <div className="chart-section">
-              <LoadChart data={loadData} prediction={prediction} />
+              <LoadChart prediction={prediction} forecast={forecast} />
             </div>
-            <Recommendation recommendation={recommendation.recommendation} prediction={prediction} />
+            <Recommendation 
+              recommendation={recommendation.recommendation} 
+              prediction={prediction}
+              onSendToCustomers={handleSendToCustomers}
+              sending={sending}
+              lastSentStatus={lastSentStatus}
+            />
           </div>
         </div>
       </div>

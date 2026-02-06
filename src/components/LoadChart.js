@@ -21,44 +21,41 @@ ChartJS.register(
   Legend
 );
 
-const LoadChart = ({ data, prediction }) => {
-  if (!data || data.length === 0) {
-    return <div>No data available</div>;
-  }
+const LoadChart = ({ prediction, forecast }) => {
+  const baseLoad = prediction?.predicted_load || 0;
 
-  const labels = data.map((item, index) => {
-    if (index === data.length - 1) return 'Current';
-    return `H${item.hour || index}`;
-  });
-  
-  const loadValues = data.map(item => item.load_kw);
-  
-  // Add prediction point
-  const extendedLabels = [...labels, 'Prediction'];
-  const extendedValues = [...loadValues, prediction?.predicted_load || 0];
+  const points = [
+    { label: 'Now', value: baseLoad, risk: prediction?.risk || 'LOW' },
+    { label: '+1h', value: forecast?.[1]?.predicted_load || baseLoad, risk: forecast?.[1]?.risk || prediction?.risk || 'LOW' },
+    { label: '+2h', value: forecast?.[2]?.predicted_load || baseLoad, risk: forecast?.[2]?.risk || prediction?.risk || 'LOW' },
+    { label: '+3h', value: forecast?.[3]?.predicted_load || baseLoad, risk: forecast?.[3]?.risk || prediction?.risk || 'LOW' },
+  ];
+
+  const getColorForRisk = (risk) => {
+    if (risk === 'HIGH') return '#ef4444';
+    if (risk === 'MEDIUM') return '#f59e0b';
+    return '#10b981';
+  };
 
   const chartData = {
-    labels: extendedLabels,
+    labels: points.map(p => p.label),
     datasets: [
       {
-        label: 'Load (kW)',
-        data: extendedValues,
-        borderColor: '#667eea',
-        backgroundColor: 'rgba(102, 126, 234, 0.15)',
-        borderWidth: 3,
-        tension: 0.4,
+        label: 'Forecast Load (kW)',
+        data: points.map(p => p.value),
+        borderColor: '#4f46e5',
+        backgroundColor: 'rgba(79, 70, 229, 0.08)',
+        borderWidth: 2,
+        tension: 0.35,
         fill: true,
         pointRadius: (context) => {
           const index = context.dataIndex;
-          if (index === data.length - 1) return 8;
-          if (index === extendedLabels.length - 1) return 8;
-          return 4;
+          if (index === 0) return 8; // Now
+          return 6; // Future hours
         },
         pointBackgroundColor: (context) => {
           const index = context.dataIndex;
-          if (index === data.length - 1) return '#10b981';
-          if (index === extendedLabels.length - 1) return '#f59e0b';
-          return '#667eea';
+          return getColorForRisk(points[index].risk);
         },
         pointBorderColor: '#fff',
         pointBorderWidth: 2,
@@ -87,10 +84,10 @@ const LoadChart = ({ data, prediction }) => {
           label: (context) => {
             const index = context.dataIndex;
             let label = `Load: ${context.parsed.y.toFixed(1)} kW`;
-            if (index === data.length - 1) {
-              label += ' (Current)';
-            } else if (index === extendedLabels.length - 1) {
-              label += ' (AI Prediction)';
+            if (index === 0) {
+              label += ' (Now)';
+            } else {
+              label += ` (Forecast +${index}h)`;
             }
             return label;
           },
@@ -100,6 +97,7 @@ const LoadChart = ({ data, prediction }) => {
     scales: {
       y: {
         beginAtZero: true,
+        suggestedMax: Math.max(baseLoad * 1.5, 320),
         title: {
           display: true,
           text: 'Load (kW)',
@@ -109,7 +107,7 @@ const LoadChart = ({ data, prediction }) => {
           },
         },
         grid: {
-          color: 'rgba(0, 0, 0, 0.05)',
+          color: 'rgba(156, 163, 175, 0.15)',
         },
       },
       x: {
@@ -130,7 +128,7 @@ const LoadChart = ({ data, prediction }) => {
 
   return (
     <div className="chart-wrapper">
-      <div className="chart-subtitle">Community Load Trend (Last 24 Hours)</div>
+      <div className="chart-subtitle">3-Hour AI Grid Forecast</div>
       <div style={{ height: '350px' }}>
         <Line data={chartData} options={options} />
       </div>
