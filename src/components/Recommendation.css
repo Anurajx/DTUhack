@@ -1,0 +1,62 @@
+.recommendation-card {
+  background: white;
+  border-radius: 20px;
+  padding: 25px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.recommendation-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+}
+
+.recommendation-header {
+  margin-bottom: 15px;
+}
+
+.recommendation-header h2 {
+  font-size: 1.3rem;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.recommendation-text {
+  font-size: 1.1rem;
+  color: #4b5563;
+  line-height: 1.6;
+  padding: 18px;
+  background: #f9fafb;
+  border-radius: 12px;
+  border-left: 4px solid #667eea;
+  margin-bottom: 20px;
+}
+
+.impact-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px solid #e5e7eb;
+}
+
+.impact-item {
+  text-align: center;
+  padding: 15px;
+  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+  border-radius: 12px;
+}
+
+.impact-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #667eea;
+  margin-bottom: 5px;
+}
+
+.impact-label {
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-weight: 500;
+}
